@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">App2</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="action_settings">Settings</string>
+  <string-array name="menu">
+    <item>Edytuj</item>
+    <item>Usuń</item>
+    <item>Wyślij</item>
+  </string-array>
+</resources>
