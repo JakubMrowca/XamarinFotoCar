@@ -16,28 +16,13 @@ namespace App3
     [Activity(Label = "ImageActivity")]
     public class ImageActivity : Activity
     {
-        private Bitmap _bitmap;
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
             SetContentView(Resource.Layout.full_foto);
-            var imgContainer = FindViewById<ImageView>(Resource.Id.fullFoto);
+            var imgContainer = FindViewById<ScaleImageView>(Resource.Id.fullFoto);
             var z = Intent.GetStringExtra("imgUrl");
             imgContainer.SetImageURI(Android.Net.Uri.Parse(z));
-
-
-            //int height = Resources.DisplayMetrics.HeightPixels;
-            //int width = imgContainer.Height;
-            //_bitmap = z.LoadAndResizeBitmap(width, height);
-            //if (_bitmap != null)
-            //{
-            //    imgContainer.SetImageBitmap(_bitmap);
-            //    _bitmap = null;
-            //}
-            //// Dispose of the Java side bitmap.
-            //GC.Collect();
-            //imgContainer.SetImageURI(Android.Net.Uri.Parse(z));
-            // Create your application here
         }
     }
 

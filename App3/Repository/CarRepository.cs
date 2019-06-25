@@ -107,5 +107,12 @@ namespace App3.Repository
                 carImagetoEdit.CarId = carId;
             });
         }
+
+        public List<Car> GetCarsContain(string text)
+        {
+            var cars = _db.All<Car>().ToList();
+            var equals = cars.Where(x => x.WIN.ToLower().Contains(text.ToLower()));
+            return equals.ToList();
+        }
     }
 }

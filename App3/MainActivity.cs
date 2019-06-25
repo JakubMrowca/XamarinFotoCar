@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -21,6 +22,7 @@ using Android.Widget;
 using App3.Components;
 using App3.Models;
 using App3.Repository;
+using GoogleSynch;
 using Plugin.Media;
 using Plugin.Media.Abstractions;
 using Realms;
@@ -51,6 +53,10 @@ namespace App3
         public static Java.IO.File _dir;
         public static Bitmap _bitmap;
 
+        private LinearLayout _container;
+
+        public string _files { get; private set; }
+
         protected override void OnCreate(Bundle savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
@@ -72,7 +78,11 @@ namespace App3
                 _dir.Mkdirs();
             }
 
+            var googl = new GoogleSynchronizer();
+            var input = Assets.Open("credentials.json", Access.Streaming);
+            _files = googl.Authorize(input, _dir.AbsolutePath);
             CreateViewForLastVin();
+
         }
 
         public bool OnNavigationItemSelected(IMenuItem item)
@@ -122,10 +132,11 @@ namespace App3
 
         private void Search()
         {
-            _searchDialog = new WinSelectDialog(this, "Szukaj");
-            _searchDialog.SetButtonTitle("Szukaj");
-            _searchDialog.Build(_carRepository.GetAllCar().Select(x => x.WIN).ToArray(), SearchAction, false);
-            _searchDialog.Show();
+            CreateViewForSearch();
+            //_searchDialog = new WinSelectDialog(this, "Szukaj");
+            //_searchDialog.SetButtonTitle("Szukaj");
+            //_searchDialog.Build(_carRepository.GetAllCar().Select(x => x.WIN).ToArray(), SearchAction, false);
+            //_searchDialog.Show();
         }
 
         protected override void OnActivityResult(int requestCode, Result resultCode, Intent data)
@@ -214,8 +225,7 @@ namespace App3
 
         private void SearchAction(object sender, DialogClickEventArgs e)
         {
-            var win = _searchDialog.Win.Trim().ToUpper();
-            CreateViewForSingleCar(win);
+            //CreateViewForSearch();
         }
 
         public override void OnCreateContextMenu(IContextMenu menu, View v, IContextMenuContextMenuInfo menuInfo)
@@ -271,10 +281,69 @@ namespace App3
             lajt.RemoveAllViews();
         }
 
+        private void CreateViewForSearch()
+        {
+            var lajt = FindViewById<LinearLayout>(Resource.Id.lajt);
+            lajt.RemoveAllViews();
+            var Win = new EditText(this);
+            Win.Gravity = GravityFlags.Center;
+            Win.TextChanged += delegate
+            {
+                var text = Win.Text;
+                var cars = _carRepository.GetCarsContain(text);
+                if(_container != null)
+                {
+                    CreateViewForManyCars(cars);
+                }
+                
+            };
+            var lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FillParent, LinearLayout.LayoutParams.WrapContent);
+            lp.SetMargins(0, 10, 0, 10);
+            lajt.AddView(Win, lp);
+            _container = new LinearLayout(this);
+            _container.Orientation = Orientation.Vertical;
+            _container.SetGravity(GravityFlags.CenterHorizontal);
+            lajt.AddView(_container);
+        }
+
+        private void CreateViewForManyCars(List<Car> cars)
+        {
+            _container.RemoveAllViews();
+            if (cars == null)
+                return;
+
+            foreach (var car in cars)
+            {
+                var images = _carRepository.GetCarImages(car.Id);
+                var Win = new TextView(this);
+                Win.Text = car.WIN;
+                Win.SetTextSize(ComplexUnitType.Pt, 11);
+                Win.SetTextColor(new Color(Color.DarkBlue));
+                Win.Gravity = GravityFlags.Center;
+                //Win.SetBackgroundColor(new Color(Color.WhiteSmoke));
+                //Win.SetShadowLayer(2, 2, 2, Color.Black);
+                Win.Click += delegate { CreateViewForSingleCar(car.WIN); };
+
+                var winCard = new Android.Support.V7.Widget.CardView(this);
+                winCard.CardElevation = 10;
+                winCard.Radius = 5;
+                winCard.SetContentPadding(5, 5, 5, 5);
+                var lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FillParent, LinearLayout.LayoutParams.WrapContent);
+                lp.SetMargins(10, 10, 10, 10);
+                winCard.AddView(Win, lp);
+
+                _container.AddView(winCard, lp);
+            }
+        }
+
         private void CreateViewForSingleCar(string win)
         {
             var car = _carRepository.GetCarByWin(win);
             _activeCar = car;
+            var winCard = new Android.Support.V7.Widget.CardView(this);
+            winCard.CardElevation = 10;
+            winCard.Radius = 5;
+            winCard.SetContentPadding(5, 5, 5, 5);
 
             var lajt = FindViewById<LinearLayout>(Resource.Id.lajt);
             lajt.RemoveAllViews();
@@ -286,17 +355,23 @@ namespace App3
             var Win = new TextView(this);
             Win.Text = car.WIN;
             Win.SetTextSize(ComplexUnitType.Pt, 11);
-            Win.SetTextColor(new Color(222, 81,81));
+            Win.SetTextColor(Color.DarkBlue);
             Win.Gravity = GravityFlags.Center;
             var lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FillParent, LinearLayout.LayoutParams.WrapContent);
-            lp.SetMargins(0, 10, 0, 10);
-
+            lp.SetMargins(10, 10, 10, 10);
+            winCard.AddView(Win);
             var lpNote = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FillParent, LinearLayout.LayoutParams.WrapContent);
             lpNote.SetMargins(0, 10, 0, 0);
-            lajt.AddView(Win,lp);
+            lajt.AddView(winCard,lp);
 
             foreach (var carImage in images)
             {
+                var newItem = new Android.Support.V7.Widget.CardView(this);
+                newItem.CardElevation = 10;
+                newItem.Radius = 5;
+                newItem.SetContentPadding(5, 5, 5, 5);
+                var lineral = new LinearLayout(this);
+                lineral.Orientation = Orientation.Vertical;
 
                 var dateInfo = new TextView(this);
                 dateInfo.SetTextSize(ComplexUnitType.Pt, 6);
@@ -332,10 +407,10 @@ namespace App3
                 {
                     imageView.SetImageBitmap(bitmapCar);
                 }
-
+                imageView.SetScaleType(ImageView.ScaleType.CenterCrop);
                 GC.Collect();
-
-                lajt.AddView(imageView);
+                lineral.AddView(imageView);
+                //lajt.AddView(imageView);
                 if (!string.IsNullOrEmpty(carImage.Note))
                 {
                     var note = new TextView(this);
@@ -349,11 +424,17 @@ namespace App3
                     note.Text = $"{carImage.Note}";
                     note.Gravity = GravityFlags.Center;
 
-                    lajt.AddView(noteInfo, lpNote);
-                    lajt.AddView(note);
+                    //lajt.AddView(noteInfo, lpNote);
+                    lineral.AddView(note,lpNote);
+                    //lajt.AddView(note);
                 }
-                lajt.AddView(dateInfo,lpNote);
-                lajt.AddView(date);
+                lineral.AddView(date, lpNote);
+                //lajt.AddView(dateInfo,lpNote);
+                //lajt.AddView(date);
+                var lpCard = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FillParent, LinearLayout.LayoutParams.WrapContent);
+                lpCard.SetMargins(10, 10, 10, 10);
+                newItem.AddView(lineral);
+                lajt.AddView(newItem, lpCard);
             }
         }
 
@@ -366,79 +447,33 @@ namespace App3
             if (cars == null)
                 return;
 
+            var carsGrouping = cars.GroupBy(x =>
+            {
+                var date = DateTime.Parse(x.CreatedDateTime);
+                return date.Day;
+            }).ToList();
+
+
             foreach (var car in cars)
             {
+                var date = DateTime.Parse(car.CreatedDateTime);
                 var images = _carRepository.GetCarImages(car.Id);
                 var Win = new TextView(this);
                 Win.Text = car.WIN;
                 Win.SetTextSize(ComplexUnitType.Pt, 11);
                 Win.SetTextColor(new Color(222, 81, 81));
                 Win.Gravity = GravityFlags.Center;
-                Win.SetBackgroundColor(new Color(Color.WhiteSmoke));
-                Win.SetShadowLayer(2,2,2, Color.Black);
                 Win.Click += delegate { CreateViewForSingleCar(car.WIN); };
 
+                var winCard = new Android.Support.V7.Widget.CardView(this);
+                winCard.CardElevation = 10;
+                winCard.Radius = 5;
+                winCard.SetContentPadding(5, 5, 5, 5);
                 var lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FillParent, LinearLayout.LayoutParams.WrapContent);
-                lp.SetMargins(0, 10, 0, 10);
-                lajt.AddView(Win, lp);
+                lp.SetMargins(10, 10, 10, 10);
+                winCard.AddView(Win, lp);
+                lajt.AddView(winCard, lp);
             }
-
-
-            //foreach (var carImage in images)
-            //{
-            //    var note = new TextView(this);
-            //    var noteInfo = new TextView(this);
-            //    noteInfo.SetTextSize(ComplexUnitType.Pt, 6);
-            //    noteInfo.Text = "Notatka";
-            //    noteInfo.SetTextColor(new Color(222, 81, 81));
-            //    noteInfo.Gravity = GravityFlags.Center;
-
-            //    note.SetTextSize(ComplexUnitType.Pt, 8);
-            //    note.Text = $"{carImage.Note}";
-            //    note.Gravity = GravityFlags.Center;
-
-            //    var dateInfo = new TextView(this);
-            //    dateInfo.SetTextSize(ComplexUnitType.Pt, 6);
-            //    dateInfo.Text = "Zrobiono";
-            //    dateInfo.SetTextColor(new Color(222, 81, 81));
-            //    dateInfo.Gravity = GravityFlags.Center;
-
-            //    var date = new TextView(this);
-            //    date.SetTextSize(ComplexUnitType.Pt, 8);
-            //    date.Text = carImage.CreatedDateTime;
-            //    date.Gravity = GravityFlags.Center;
-
-            //    var imageView = new ImageView(this);
-            //    imageView.Id = carImage.Id;
-            //    imageView.SetMinimumWidth(500);
-            //    imageView.SetMinimumHeight(700);
-            //    imageView.Click += delegate
-            //    {
-            //        var intent = new Intent(this, typeof(ImageActivity));
-            //        intent.PutExtra("imgUrl", carImage.PhotoName);
-            //        StartActivity(intent);
-            //    };
-
-            //    RegisterForContextMenu(imageView);
-
-            //    int height = 500;
-            //    int width = 700;
-            //    var bitmapCar = carImage.PhotoName.LoadAndResizeBitmap(width, height);
-            //    if (bitmapCar != null)
-            //    {
-            //        imageView.SetImageBitmap(bitmapCar);
-            //    }
-
-            //    GC.Collect();
-
-            //    lajt.AddView(imageView);
-            //    var lpNote = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.FillParent, LinearLayout.LayoutParams.WrapContent);
-            //    lpNote.SetMargins(0, 10, 0, 0);
-            //    lajt.AddView(noteInfo, lpNote);
-            //    lajt.AddView(note);
-            //    lajt.AddView(dateInfo, lpNote);
-            //    lajt.AddView(date);
-            //}
         }
     }
 }
